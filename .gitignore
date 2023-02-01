@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/templates
 /.pnp
 .pnp.js
 
