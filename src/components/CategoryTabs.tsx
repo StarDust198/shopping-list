@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -10,9 +10,10 @@ import TabPanel from '@mui/lab/TabPanel';
 
 import { fetchProducts, fetchCategories } from 'api/requests';
 import { ProductsStack } from './ProductsStack';
-// import { products, categories } from 'mock';
 
 export const CategoryTabs = () => {
+  const [value, setValue] = React.useState('');
+
   const productsQuery = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
@@ -21,9 +22,11 @@ export const CategoryTabs = () => {
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
+    onSuccess: (data) => {
+      const newVal = Object.values(data.data)[0];
+      setValue(newVal.name);
+    },
   });
-
-  const [value, setValue] = React.useState('');
   // useEffect(() => setValue(categories[0].name), [categories]);
 
   if (productsQuery.isLoading || categoriesQuery.isLoading)
@@ -42,29 +45,31 @@ export const CategoryTabs = () => {
 
   return (
     <Box sx={{ width: '100%', typography: 'body1' }}>
-      <TabContext value={value}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <TabList onChange={handleChange} aria-label="Category tabs">
-            {categories.map((category) => (
-              <Tab
-                key={category.id}
-                label={category.name}
-                value={category.name}
+      {value && (
+        <TabContext value={value}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <TabList onChange={handleChange} aria-label="Category tabs">
+              {categories.map((category) => (
+                <Tab
+                  key={category.id}
+                  label={category.name}
+                  value={category.name}
+                />
+              ))}
+            </TabList>
+          </Box>
+          {categories.map((category) => (
+            <TabPanel key={category.id} value={category.name}>
+              <ProductsStack
+                category={category.name}
+                products={products.filter(
+                  (product) => product.category === category.name
+                )}
               />
-            ))}
-          </TabList>
-        </Box>
-        {categories.map((category) => (
-          <TabPanel key={category.id} value={category.name}>
-            <ProductsStack
-              category={category.name}
-              products={products.filter(
-                (product) => product.category === category.name
-              )}
-            />
-          </TabPanel>
-        ))}
-      </TabContext>
+            </TabPanel>
+          ))}
+        </TabContext>
+      )}
     </Box>
   );
 };

@@ -1,16 +1,20 @@
+import { DetailedHTMLProps, HTMLAttributes, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import Paper from '@mui/material/Paper';
 import { styled } from '@mui/material/styles';
-import { DetailedHTMLProps, HTMLAttributes, useState } from 'react';
-
 import Rating from '@mui/material/Rating';
 import PanoramaVerticalIcon from '@mui/icons-material/PanoramaVertical';
 import PanoramaVerticalSelectIcon from '@mui/icons-material/PanoramaVerticalSelect';
+import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { ReactNode } from 'react';
+
+import { addProduct, deleteProduct } from 'api/requests';
+import { IProduct } from 'interfaces/products';
 
 export const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -28,25 +32,36 @@ interface ProductItemProps
     DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
     'ref'
   > {
-  title: string;
-  quantity: number;
-  // setNumber: () => void;
+  product: IProduct;
 }
 
-export const ProductItem = ({
-  title,
-  quantity = 0,
-  ...props
-}: ProductItemProps) => {
-  const [rating, setRating] = useState<number | null>(quantity);
+export const ProductItem = ({ product, ...props }: ProductItemProps) => {
+  const [rating, setRating] = useState(product.availability);
+
+  const queryClient = useQueryClient();
+  const changeMutation = useMutation({
+    mutationFn: (product: IProduct) => addProduct(product),
+    // onSuccess: () => {
+    //   queryClient.invalidateQueries(['products']);
+    // },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (productId: string) => deleteProduct(productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['products']);
+    },
+  });
 
   const incRating = () => {
     if (rating === 3) return;
+    changeMutation.mutate({ ...product, availability: rating + 1 });
     setRating((rating) => (rating ? rating + 1 : 1));
   };
 
   const decRating = () => {
     if (!rating) return;
+    changeMutation.mutate({ ...product, availability: rating - 1 });
     setRating((rating) => (rating ? rating - 1 : 0));
   };
 
@@ -62,8 +77,8 @@ export const ProductItem = ({
       >
         <ArrowLeftIcon />
       </IconButton>
-      <Box display="flex">
-        <Typography variant="button">{title}</Typography>
+      <Box display="flex" sx={{ alignItems: 'center' }}>
+        <Typography variant="button">{product.name}</Typography>
         <Rating
           sx={{ ml: 1 }}
           emptyIcon={
@@ -90,9 +105,19 @@ export const ProductItem = ({
           max={3}
           value={rating}
           onChange={(event, newValue) => {
-            setRating(newValue);
+            if (newValue) setRating(newValue);
           }}
         />
+        <IconButton
+          size="large"
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          sx={{ ml: 1 }}
+          onClick={() => deleteMutation.mutate(product.id)}
+        >
+          <CloseIcon />
+        </IconButton>
       </Box>
       <IconButton
         size="large"
